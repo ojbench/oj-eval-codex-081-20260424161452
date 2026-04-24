@@ -7,42 +7,34 @@
 using namespace std;
 
 struct Dinic {
-    struct Edge { int to; int cap; int rev; };
     int N;
-    vector<vector<Edge>> G;
+    vector<int> head, to, cap, nxt;
     vector<int> level, it;
-    Dinic(int n=0): N(n), G(n), level(n), it(n) {}
-    void reset(int n){ N=n; G.assign(n,{}); level.assign(n,0); it.assign(n,0);}    
-    inline void add_edge(int u,int v,int c){
-        G[u].push_back(Edge{v,c,(int)G[v].size()});
-        G[v].push_back(Edge{u,0,(int)G[u].size()-1});
-    }
+    int ec;
+    Dinic(int n=0){ reset(n); }
+    void reset(int n){ N=n; head.assign(n,-1); to.clear(); cap.clear(); nxt.clear(); level.assign(n,0); it.assign(n,0); ec=0; to.reserve(20000); cap.reserve(20000); nxt.reserve(20000);}    
+    inline void add_dir(int u,int v,int c){ to.push_back(v); cap.push_back(c); nxt.push_back(head[u]); head[u]=ec++; }
+    inline void add_edge(int u,int v,int c){ add_dir(u,v,c); add_dir(v,u,0); }
     bool bfs(int s,int t){
         fill(level.begin(), level.end(), -1);
-        static int qbuf[5005]; // n<=3000
+        static int qbuf[6005]; // n<=3000
         int qb=0, qe=0;
         level[s]=0; qbuf[qe++]=s;
         while(qb<qe){
             int u=qbuf[qb++];
-            for(const auto &e:G[u]) if(e.cap>0 && level[e.to]<0){ level[e.to]=level[u]+1; qbuf[qe++]=e.to; }
+            for(int e=head[u]; e!=-1; e=nxt[e]) if(cap[e]>0){ int v=to[e]; if(level[v]<0){ level[v]=level[u]+1; qbuf[qe++]=v; if(v==t) return true; }}
         }
         return level[t]>=0;
     }
     int dfs(int u,int t,int f){
         if(u==t) return f;
-        for(int &i=it[u]; i<(int)G[u].size(); ++i){
-            Edge &e=G[u][i];
-            if(e.cap>0 && level[e.to]==level[u]+1){
-                int ret=dfs(e.to,t,min(f,e.cap));
-                if(ret>0){ e.cap-=ret; G[e.to][e.rev].cap+=ret; return ret; }
-            }
-        }
+        for(int &e=it[u]; e!=-1; e=nxt[e]) if(cap[e]>0){ int v=to[e]; if(level[v]==level[u]+1){ int ret=dfs(v,t,min(f,cap[e])); if(ret>0){ cap[e]-=ret; cap[e^1]+=ret; return ret; } } }
         return 0;
     }
     long long maxflow(int s,int t,int limit=INT_MAX){
         long long flow=0;
         while(flow<limit && bfs(s,t)){
-            fill(it.begin(), it.end(), 0);
+            it = head;
             int add;
             while(flow<limit && (add=dfs(s,t,limit - (int)flow))>0) flow+=add;
         }
@@ -75,7 +67,7 @@ int main(){
 
     auto build_graph = [&](void){
         din.reset(n);
-        for(int i=0;i<n;++i) din.G[i].reserve(max(1, deg[i]*2));
+        din.to.reserve(4*(int)edges.size()+5); din.cap.reserve(4*(int)edges.size()+5); din.nxt.reserve(4*(int)edges.size()+5);
         for(auto &e: edges){
             int u=e.first, v=e.second;
             din.add_edge(u,v,1);
@@ -97,7 +89,7 @@ int main(){
         queue<int> q; q.push(s); vis[s]=1;
         while(!q.empty()){
             int u=q.front(); q.pop();
-            for(const auto &e: din.G[u]) if(e.cap>0 && !vis[e.to]){ vis[e.to]=1; q.push(e.to);}            
+            for(int e=din.head[u]; e!=-1; e=din.nxt[e]) if(din.cap[e]>0){ int v=din.to[e]; if(!vis[v]){ vis[v]=1; q.push(v);} }
         }
         for(int v=s+1; v<n; ++v){ if(parent[v]==t && vis[v]) parent[v]=s; }
         if(vis[parent[t]]){ parent[s]=parent[t]; parent[t]=s; swap(cutval[s], cutval[t]); }
