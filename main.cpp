@@ -13,17 +13,18 @@ struct Dinic {
     vector<int> level, it;
     Dinic(int n=0): N(n), G(n), level(n), it(n) {}
     void reset(int n){ N=n; G.assign(n,{}); level.assign(n,0); it.assign(n,0);}    
-    void add_edge(int u,int v,int c){
-        Edge a{v,c,(int)G[v].size()};
-        Edge b{u,0,(int)G[u].size()};
-        G[u].push_back(a); G[v].push_back(b);
+    inline void add_edge(int u,int v,int c){
+        G[u].push_back(Edge{v,c,(int)G[v].size()});
+        G[v].push_back(Edge{u,0,(int)G[u].size()-1});
     }
     bool bfs(int s,int t){
         fill(level.begin(), level.end(), -1);
-        queue<int> q; level[s]=0; q.push(s);
-        while(!q.empty()){
-            int u=q.front(); q.pop();
-            for(const auto &e:G[u]) if(e.cap>0 && level[e.to]<0){ level[e.to]=level[u]+1; q.push(e.to);}        
+        static int qbuf[5005]; // n<=3000
+        int qb=0, qe=0;
+        level[s]=0; qbuf[qe++]=s;
+        while(qb<qe){
+            int u=qbuf[qb++];
+            for(const auto &e:G[u]) if(e.cap>0 && level[e.to]<0){ level[e.to]=level[u]+1; qbuf[qe++]=e.to; }
         }
         return level[t]>=0;
     }
