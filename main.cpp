@@ -39,11 +39,12 @@ struct Dinic {
         }
         return 0;
     }
-    long long maxflow(int s,int t){
+    long long maxflow(int s,int t,int limit=INT_MAX){
         long long flow=0;
-        while(bfs(s,t)){
+        while(flow<limit && bfs(s,t)){
             fill(it.begin(), it.end(), 0);
-            while(int f=dfs(s,t,INT_MAX)) flow+=f;
+            int add;
+            while(flow<limit && (add=dfs(s,t,limit - (int)flow))>0) flow+=add;
         }
         return flow;
     }
@@ -74,6 +75,7 @@ int main(){
 
     auto build_graph = [&](void){
         din.reset(n);
+        for(int i=0;i<n;++i) din.G[i].reserve(max(1, deg[i]*2));
         for(auto &e: edges){
             int u=e.first, v=e.second;
             din.add_edge(u,v,1);
@@ -87,7 +89,8 @@ int main(){
     for(int s=1; s<n; ++s){
         int t=parent[s];
         build_graph();
-        long long f = din.maxflow(s,t);
+        int lim = min(3, min(deg[s], deg[t]));
+        long long f = din.maxflow(s,t,lim);
         cutval[s]=f;
         // BFS in residual graph to find reachable set from s
         vector<char> vis(n,0);
