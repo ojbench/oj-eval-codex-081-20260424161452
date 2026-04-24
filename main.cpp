@@ -62,25 +62,25 @@ int main(){
     if(m==0){ cout<<0<<"\n"; return 0; }
 
     // Build Gomory–Hu tree using Dinic oracle on unit capacities.
-    // Complexity: (n-1) maxflow computations. Each maxflow on sparse unit graph is reasonable.
+    // Build residual graph once; reuse by copying capacities for each maxflow.
     Dinic din(n);
-
-    auto build_graph = [&](void){
-        din.reset(n);
-        din.to.reserve(4*(int)edges.size()+5); din.cap.reserve(4*(int)edges.size()+5); din.nxt.reserve(4*(int)edges.size()+5);
-        for(auto &e: edges){
-            int u=e.first, v=e.second;
-            din.add_edge(u,v,1);
-            din.add_edge(v,u,1);
-        }
-    };
+    din.reset(n);
+    din.to.reserve(4*(int)edges.size()+5); din.cap.reserve(4*(int)edges.size()+5); din.nxt.reserve(4*(int)edges.size()+5);
+    for(auto &e: edges){
+        int u=e.first, v=e.second;
+        din.add_edge(u,v,1);
+        din.add_edge(v,u,1);
+    }
+    // Save base capacities to restore before each maxflow
+    vector<int> baseCap = din.cap;
 
     vector<int> parent(n,0);
     vector<long long> cutval(n,0);
     for(int i=1;i<n;++i) parent[i]=0; // root parent of others
     for(int s=1; s<n; ++s){
         int t=parent[s];
-        build_graph();
+        // restore capacities for fresh maxflow
+        din.cap = baseCap;
         int lim = min(3, min(deg[s], deg[t]));
         long long f = din.maxflow(s,t,lim);
         cutval[s]=f;
